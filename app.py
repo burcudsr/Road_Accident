@@ -30,31 +30,40 @@ with st.form("risk_form"):
         school_season = st.checkbox("School Season?")
     submitted = st.form_submit_button("Predict Risk")
 
-# 3. Final Çözüm
+# 3. Hata ayıklamalı tahmin bloğu
 if submitted:
-    # 1. Her şeyi temiz bir şekilde 0 ile başlat
-    input_df = pd.DataFrame(0, index=[0], columns=model_columns)
+    # 1. Başlangıç şablonu
+    input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
     
-    # 2. Değerleri atama (Artık eğitimdeki isimler neyse tam o)
+    # 2. Değer atamaları
     input_df.loc[0, 'num_lanes'] = float(num_lanes)
     input_df.loc[0, 'curvature'] = float(curvature)
     input_df.loc[0, 'speed_limit'] = float(speed_limit)
     input_df.loc[0, 'num_reported_accidents'] = float(num_reported_accidents)
     
-    # Boolean değerler (Checkbox'lar)
-    # Yeni modelin sütun isimleri neyse (holiday veya holiday_True) buraya onu yaz
-    input_df.loc[0, 'holiday'] = int(holiday) 
-    input_df.loc[0, 'public_road'] = int(public_road)
-    input_df.loc[0, 'road_signs_present'] = int(road_signs_present)
-    input_df.loc[0, 'school_season'] = int(school_season)
-    
+    # Checkbox'ları modelde varsa atıyoruz
+    for col in ['holiday', 'public_road', 'road_signs_present', 'school_season']:
+        if col in input_df.columns:
+            input_df.loc[0, col] = 1.0 if (locals()[col]) else 0.0
+            
     # 3. Kategorikler
     for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
                 f'weather_{weather}', f'time_of_day_{time_of_day}']:
         if col in input_df.columns:
-            input_df.loc[0, col] = 1
-            
+            input_df.loc[0, col] = 1.0
+
+    # --- DEBUG PANELİ (Modelin ne beklediğini burada göreceksin) ---
+    st.write("### Hata Ayıklama Paneli")
+    st.write("Modelin Beklediği Sütun Sayısı:", len(model_columns))
+    st.write("Modelin Beklediği Sütunlar:", list(model_columns))
+    st.write("Senin Oluşturduğun Sütunlar:", list(input_df.columns))
+    st.write("DataFrame Önizleme (Sadece 1 olanlar):", input_df.loc[:, (input_df != 0).any(axis=0)])
+    # -----------------------------------------------------------
+
     # 4. Tahmin
-    input_scaled = scaler.transform(input_df)
-    prediction = model.predict(input_scaled)
-    st.success(f"Risk Skoru: {prediction[0]:.4f}")
+    try:
+        input_scaled = scaler.transform(input_df)
+        prediction = model.predict(input_scaled)
+        st.success(f"Risk Skoru: {prediction[0]:.4f}")
+    except Exception as e:
+        st.error(f"Tahmin Hatası: {e}")
