@@ -31,32 +31,37 @@ with st.form("risk_form"):
     submitted = st.form_submit_button("Predict Risk")
 
 # 3. Hata almayan tahmin mantığı
+
+# 3. Hata almayan tahmin mantığı
 if submitted:
-    # 1. Şablonu modelin bildiği sütun sırasıyla oluştur
+    # A. Tüm sütunları 0 olan şablon oluştur
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # 2. Sütun isimlerini manuel olarak ve tek tek eşleştir
-    # DataFrame'e doğrudan değil, .loc ile sütun bazlı atama yapalım
-    input_df.loc[0, 'num_lanes'] = num_lanes
-    input_df.loc[0, 'curvature'] = curvature
-    input_df.loc[0, 'speed_limit'] = speed_limit
-    input_df.loc[0, 'num_reported_accidents'] = num_reported_accidents
-    input_df.loc[0, 'road_signs_present'] = int(road_signs_present)
-    input_df.loc[0, 'public_road'] = int(public_road)
-    input_df.loc[0, 'holiday'] = int(holiday)
-    input_df.loc[0, 'school_season'] = int(school_season)
+    # B. Sütun isimlerini model_columns listesindeki tam isimlerle eşleştir
+    # Eğer DataFrame'de 'num_lanes' ismi varsa ata, yoksa hata alma
+    def set_val(col_name, value):
+        if col_name in input_df.columns:
+            input_df.loc[0, col_name] = value
+
+    set_val('num_lanes', num_lanes)
+    set_val('curvature', curvature)
+    set_val('speed_limit', speed_limit)
+    set_val('num_reported_accidents', num_reported_accidents)
+    set_val('road_signs_present', int(road_signs_present))
+    set_val('public_road', int(public_road))
+    set_val('holiday', int(holiday))
+    set_val('school_season', int(school_season))
     
-    # 3. Dummy sütunları atarken, sadece modelde olanları güncelle
+    # C. Dummy sütunları güncelle
     for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
                 f'weather_{weather}', f'time_of_day_{time_of_day}']:
-        if col in input_df.columns:
-            input_df.loc[0, col] = 1
+        set_val(col, 1)
     
-    # 4. Tahmin
+    # D. Tahmin
     try:
         input_scaled = scaler.transform(input_df)
         prediction = model.predict(input_scaled)
         st.success(f"Risk Skoru: {prediction[0]:.4f}")
     except Exception as e:
-        st.error(f"Scaler hatası: {str(e)}")
-        st.write("Mevcut sütunlar:", input_df.columns.tolist())
+        st.error(f"Hata: {str(e)}")
+        st.write("Eğitimde kullanılan model sütunları:", model_columns.tolist())
