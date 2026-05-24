@@ -3,7 +3,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-# 1. Dosya yollarını belirle ve modelleri yükle
+# 1. Modelleri yükle
 base_path = os.path.dirname(__file__)
 model = joblib.load(os.path.join(base_path, 'road_accident_catboost_model.joblib'))
 scaler = joblib.load(os.path.join(base_path, 'road_accident_scaler.joblib'))
@@ -30,37 +30,47 @@ with st.form("risk_form"):
         school_season = st.checkbox("School Season?")
     submitted = st.form_submit_button("Predict Risk")
 
-# 3. Hata almayan tahmin mantığı
-
-# 3. Hata almayan tahmin mantığı
+# 3. Tahmin Mantığı
 if submitted:
-    # 1. Önce tamamen boş bir sözlük (dictionary) hazırla
-    # Bu, tip çakışmalarını %100 engeller.
-    input_data = {col: 0.0 for col in model_columns} # Her şeyi 0.0 float yap
+    # A. Eğitimdeki tüm sütunları 0 olarak içeren boş bir şablon oluştur
+    # Bu adım Scaler'ın "sütun isimleri uyuşmuyor" hatasını kesin olarak keser
+    input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # 2. Değerleri sözlüğe ata
-    input_data['num_lanes'] = float(num_lanes)
-    input_data['curvature'] = float(curvature)
-    input_data['speed_limit'] = float(speed_limit)
-    input_data['num_reported_accidents'] = float(num_reported_accidents)
-    input_data['road_signs_present'] = float(int(road_signs_present))
-    input_data['public_road'] = float(int(public_road))
-    input_data['holiday'] = float(int(holiday))
-    input_data['school_season'] = float(int(school_season))
+    # B. Sayısal ve boolean değerleri şablona ata
+    input_df.loc[0, 'num_lanes'] = int(num_lanes)
+    input_df.loc[0, 'curvature'] = float(curvature)
+    input_df.loc[0, 'speed_limit'] = int(speed_limit)
+    input_df.loc[0, 'num_reported_accidents'] = int(num_reported_accidents)
+    input_df.loc[0, 'road_signs_present'] = int(road_signs_present)
+    input_df.loc[0, 'public_road'] = int(public_road)
+    input_df.loc[0, 'holiday'] = int(holiday)
+    input_df.loc[0, 'school_season'] = int(school_season)
     
-    # 3. Dummy'leri ata
-    for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
-                f'weather_{weather}', f'time_of_day_{time_of_day}']:
-        if col in input_data:
-            input_data[col] = 1.0
+    # C. Kategorik (dummy) değişkenleri ata
+    # Modelin bildiği sütunları tek tek kontrol et
+    category_cols = [
+        f'road_type_{road_type}', 
+        f'lighting_{lighting}', 
+        f'weather_{weather}', 
+        f'time_of_day_{time_of_day}'
+    ]
+    
+    for col in category_cols:
+        if col in input_df.columns:
+            input_df.loc[0, col] = 1
             
-    # 4. DataFrame'i sözlükten oluştur (En garantili yöntem)
-    input_df = pd.DataFrame([input_data])
-    
-    # 5. Sütun sırasını model_columns ile zorla eşle
-    input_df = input_df[model_columns]
-    
-    # 6. Tahmin
-    input_scaled = scaler.transform(input_df)
-    prediction = model.predict(input_scaled)
-    st.success(f"Risk Skoru: {prediction[0]:.4f}")
+    # D. Ölçeklendirme ve Tahmin
+    try:
+        input_scaled = scaler.transform(input_df)
+        prediction = model.predict(input_scaled)
+        
+        # E. Sonuç
+        st.success(f"Predicted Accident Risk Score: {prediction[0]:.4f}")
+        
+        if prediction[0] > 0.5:
+            st.warning("⚠️ High accident risk detected.")
+        else:
+            st.info("✅ Low accident risk detected.")
+            
+    except Exception as e:
+        st.error(f"Tahmin hatası: {e}")
