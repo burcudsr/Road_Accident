@@ -39,41 +39,38 @@ with st.form("risk_form"):
 
 # 3. Tahmin İşlemi
 if submitted:
-    # 1. Modelin eğitimde gördüğü tüm sütunları 0 (int) olarak içeren şablonu oluştur
+    # 1. Modelin eğitimde gördüğü tüm sütunları 0 olarak içeren boş bir şablon oluştur
     # Bu, sütun ismi ve sırasını eğitim aşamasıyla %100 uyumlu hale getirir.
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # 2. Sayısal değişkenleri ata
+    # 2. Sayısal değişkenleri (num_lanes, curvature vb.) ata
     input_df['num_lanes'] = num_lanes
     input_df['curvature'] = curvature
     input_df['speed_limit'] = speed_limit
     input_df['num_reported_accidents'] = num_reported_accidents
     
-    # 3. Zaten 1-0 olan (bool) değişkenleri ata
+    # 3. Zaten 1-0 olan sütunları (checkbox değerleri) int'e çevirip ata
     input_df['road_signs_present'] = int(road_signs_present)
     input_df['public_road'] = int(public_road)
     input_df['holiday'] = int(holiday)
     input_df['school_season'] = int(school_season)
     
-    # 4. Kategorik değişkenleri (dummies) ata
-    # Eğitimde 'drop_first=True' kullandığınızı varsayarak:
-    # Sadece ilk kategoriden farklı olanı 1 yapıyoruz.
+    # 4. Kategorik değişkenleri (dummies) 'drop_first' mantığına göre ata
+    # Sadece ilk kategoriden farklı olanı 1 yapıyoruz. 
+    # 'in input_df.columns' kontrolü, olmayan sütunu atamaya çalışmanızı önler.
     if f'road_type_{road_type}' in input_df.columns:
         input_df[f'road_type_{road_type}'] = 1
-        
     if f'lighting_{lighting}' in input_df.columns:
         input_df[f'lighting_{lighting}'] = 1
-        
     if f'weather_{weather}' in input_df.columns:
         input_df[f'weather_{weather}'] = 1
-        
     if f'time_of_day_{time_of_day}' in input_df.columns:
         input_df[f'time_of_day_{time_of_day}'] = 1
     
-    # 5. Scaler ve Predict
-    # Artık tüm sütunlar eğitimdekiyle birebir aynı, hata vermeyecektir
+    # 5. Scaler ve Predict: Şimdi tüm sütunlar eğitimdekiyle %100 uyumlu
     input_scaled = scaler.transform(input_df)
     prediction = model.predict(input_scaled)
+    
     
     # F. Sonuçları Göster
     risk_score = prediction[0]
