@@ -42,35 +42,37 @@ with st.form("risk_form"):
 
 # 3. Prediction Process
 if submitted:
-    # Create input DataFrame
-    input_df = pd.DataFrame({
+    # 1. Kullanıcıdan gelen veriyi bir dict olarak al ve DataFrame yap
+    input_data = {
         'road_type': [road_type],
         'num_lanes': [num_lanes],
         'curvature': [curvature],
         'speed_limit': [speed_limit],
         'lighting': [lighting],
         'weather': [weather],
+        'time_of_day': [time_of_day],
+        'num_reported_accidents': [num_reported_accidents],
         'road_signs_present': [road_signs_present],
         'public_road': [public_road],
-        'time_of_day': [time_of_day],
         'holiday': [holiday],
-        'school_season': [school_season],
-        'num_reported_accidents': [num_reported_accidents]
-    })
+        'school_season': [school_season]
+    }
+    input_df = pd.DataFrame(input_data)
     
-    # Preprocessing
-    # 1. Apply one-hot encoding for categorical variables
-    input_encoded = pd.get_dummies(input_df)
+    # 2. Eğitimdeki aynı mantıkla get_dummies uygula (sadece object sütunları)
+    # Eğitimde cat_cols sadece object'ti, burada da öyle yapıyoruz
+    input_encoded = pd.get_dummies(input_df, columns=['road_type', 'lighting', 'weather', 'time_of_day'])
     
-    # 2. Convert boolean columns to integer (0 or 1) to match training data
-    bool_cols = input_encoded.select_dtypes(include=['bool']).columns
+    # 3. Bool kolonları int yap
+    bool_cols = ['road_signs_present', 'public_road', 'holiday', 'school_season']
     for col in bool_cols:
         input_encoded[col] = input_encoded[col].astype(int)
         
-    # 3. Reindex to match the exact feature set the model was trained on
+    # 4. KRİTİK ADIM: Reindex
+    # Modelin eğitimde gördüğü tüm sütunları zorla oluştur, eksikleri 0 ile doldur
     input_final = input_encoded.reindex(columns=model_columns, fill_value=0)
     
-    # 4. Scale and predict
+    # 5. Scaler ve Predict
     input_scaled = scaler.transform(input_final)
     prediction = model.predict(input_scaled)
     
