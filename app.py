@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import joblib
+import pandas as pd
 
 # Dosyaların bulunduğu klasörü otomatik olarak belirle
 base_path = os.path.dirname(__file__)
