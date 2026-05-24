@@ -2,19 +2,14 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# 1. Loading Libraries and Models
-# Ensure your model files are in the same directory as the script
-try:
-    model = joblib.load('road_accident_catboost_model.joblib')
-    scaler = joblib.load('road_accident_scaler.joblib')
-    # model_columns should contain the list of dummy-encoded column names from training
-    model_columns = joblib.load('model_columns.joblib') 
-except Exception as e:
-    st.error(f"Error loading model files: {e}")
+# 1. Load the model and the scaler
+# Ensure these files are in the same directory as this app.py file
+model = joblib.load('road_accident_catboost_model.joblib')
+scaler = joblib.load('road_accident_scaler.joblib')
 
-st.title("🛣️ Road Accident Risk Prediction Panel")
+st.title("🛣️ Road Accident Risk Prediction")
 
-# 2. User Interface
+# 2. User Input Form
 with st.form("risk_form"):
     col1, col2 = st.columns(2)
     
@@ -28,17 +23,17 @@ with st.form("risk_form"):
         
     with col2:
         time_of_day = st.selectbox("Time of Day", ["morning", "afternoon", "evening"])
-        num_reported_accidents = st.number_input("Number of Reported Accidents", 0, 7, 0)
-        road_signs_present = st.checkbox("Are Road Signs Present?")
-        public_road = st.checkbox("Is it a Public Road?")
-        holiday = st.checkbox("Is it a Holiday?")
-        school_season = st.checkbox("Is it School Season?")
+        num_reported_accidents = st.number_input("Reported Accidents", 0, 7, 0)
+        road_signs_present = st.checkbox("Road Signs Present?")
+        public_road = st.checkbox("Public Road?")
+        holiday = st.checkbox("Holiday?")
+        school_season = st.checkbox("School Season?")
 
     submitted = st.form_submit_button("Predict Risk")
 
 # 3. Prediction Process
 if submitted:
-    # Convert user input to DataFrame
+    # Prepare input data as a DataFrame
     input_df = pd.DataFrame([{
         'road_type': road_type,
         'num_lanes': num_lanes,
@@ -54,19 +49,17 @@ if submitted:
         'num_reported_accidents': num_reported_accidents
     }])
     
-    # Feature Engineering (One-Hot Encoding)
+    # Feature Engineering: Encoding categorical variables
+    # We use get_dummies to match the format used during training
     input_encoded = pd.get_dummies(input_df)
     
-    # Align with training columns (add missing columns as 0)
-    input_final = input_encoded.reindex(columns=model_columns, fill_value=0)
-    
-    # Scaling
-    input_scaled = scaler.transform(input_final)
+    # Scaling: Applying the same scaler used during training
+    input_scaled = scaler.transform(input_encoded)
     
     # Prediction
     prediction = model.predict(input_scaled)
     
-    # Results
+    # Results Display
     risk_score = prediction[0]
     st.success(f"Predicted Accident Risk Score: {risk_score:.4f}")
     
