@@ -42,20 +42,20 @@ with st.form("risk_form"):
 # 3. Prediction Process
 if submitted:
     # Create input DataFrame
-    input_df = pd.DataFrame([{
-        'road_type': road_type,
-        'num_lanes': num_lanes,
-        'curvature': curvature,
-        'speed_limit': speed_limit,
-        'lighting': lighting,
-        'weather': weather,
-        'road_signs_present': road_signs_present,
-        'public_road': public_road,
-        'time_of_day': time_of_day,
-        'holiday': holiday,
-        'school_season': school_season,
-        'num_reported_accidents': num_reported_accidents
-    }])
+    input_df = pd.DataFrame({
+        'road_type': [road_type],
+        'num_lanes': [num_lanes],
+        'curvature': [curvature],
+        'speed_limit': [speed_limit],
+        'lighting': [lighting],
+        'weather': [weather],
+        'road_signs_present': [road_signs_present],
+        'public_road': [public_road],
+        'time_of_day': [time_of_day],
+        'holiday': [holiday],
+        'school_season': [school_season],
+        'num_reported_accidents': [num_reported_accidents]
+    })
     
     # Preprocessing
     # 1. Apply one-hot encoding for categorical variables
