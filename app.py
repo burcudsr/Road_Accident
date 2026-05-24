@@ -3,7 +3,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-# 1. Modelleri yükle
+# 1. Modelleri ve sütun listesini yükle
 base_path = os.path.dirname(__file__)
 model = joblib.load(os.path.join(base_path, 'road_accident_catboost_model.joblib'))
 scaler = joblib.load(os.path.join(base_path, 'road_accident_scaler.joblib'))
@@ -30,34 +30,38 @@ with st.form("risk_form"):
         school_season = st.checkbox("School Season?")
     submitted = st.form_submit_button("Predict Risk")
 
-# 3. Hata almayan tahmin mantığı
+# 3. Kesin Çözüm: Tahmin Mantığı
 if submitted:
-    # A. Tüm sütunları 0 olan şablon oluştur
+    # A. Eğitimdeki tam sütun yapısıyla boş bir DataFrame oluştur
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # B. Sayısal sütunları ata
-    input_df.loc[0, 'num_lanes'] = float(num_lanes)
-    input_df.loc[0, 'curvature'] = float(curvature)
-    input_df.loc[0, 'speed_limit'] = float(speed_limit)
-    input_df.loc[0, 'num_reported_accidents'] = float(num_reported_accidents)
+    # B. Kullanıcı verilerini modelin beklediği isimlerle eşleştir
+    # İsimleri Hata Mesajındaki isimlerle birebir aynı yaptık
+    input_values = {
+        'num_lanes': float(num_lanes),
+        'curvature': float(curvature),
+        'speed_limit': float(speed_limit),
+        'num_reported_accidents': float(num_reported_accidents),
+        'road_signs_present_True': 1.0 if road_signs_present else 0.0,
+        'public_road_True': 1.0 if public_road else 0.0,
+        'holiday_True': 1.0 if holiday else 0.0,
+        'school_season_True': 1.0 if school_season else 0.0,
+        f'road_type_{road_type}': 1.0,
+        f'lighting_{lighting}': 1.0,
+        f'weather_{weather}': 1.0,
+        f'time_of_day_{time_of_day}': 1.0
+    }
     
-    # C. HATA ÇÖZÜMÜ: Eğitimdeki isimlere göre eşleştirme (Suffix ekledik)
-    input_df.loc[0, 'holiday_True'] = 1.0 if holiday else 0.0
-    input_df.loc[0, 'public_road_True'] = 1.0 if public_road else 0.0
-    input_df.loc[0, 'road_signs_present_True'] = 1.0 if road_signs_present else 0.0
-    input_df.loc[0, 'school_season_True'] = 1.0 if school_season else 0.0
-    
-    # D. Kategorik değişkenleri ata
-    # Eğitimdeki sütun isimlerine göre 1 yap
-    for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
-                f'weather_{weather}', f'time_of_day_{time_of_day}']:
-        if col in input_df.columns:
-            input_df.loc[0, col] = 1.0
+    # C. Verileri DataFrame'e güvenli şekilde aktar
+    for col_name, value in input_values.items():
+        if col_name in input_df.columns:
+            input_df.loc[0, col_name] = value
             
-    # E. Tahmin
+    # D. Ölçeklendirme ve Tahmin
     try:
         input_scaled = scaler.transform(input_df)
         prediction = model.predict(input_scaled)
-        st.success(f"Risk Skoru: {prediction[0]:.4f}")
+        st.success(f"Predicted Accident Risk Score: {prediction[0]:.4f}")
     except Exception as e:
-        st.error(f"Hata: {str(e)}")
+        st.error(f"Tahmin Hatası: {e}")
+        st.write("Modelin Beklediği Sütunlar:", list(model_columns))
