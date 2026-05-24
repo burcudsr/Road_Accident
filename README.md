@@ -4,8 +4,7 @@ This project aims to predict road accident risk (a continuous value in the range
 
 ## 🚀 About the Project
 
-A deployed Streamlit app version of this project is available here:
-**[Road Accident Risk Prediction App](https://road-accident-risk-bdsr.streamlit.app/)**
+AAccess the tool here: **[Road Accident Risk Prediction App](https://road-accident-risk-bdsr.streamlit.app/)**
 
 ## 🛠 Technical Details
 
