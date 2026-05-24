@@ -1,40 +1,6 @@
-import streamlit as st
-import pandas as pd
-import joblib
-
-# 1. Load the model and the scaler
-# Ensure these files are in the same directory as this app.py file
-model = joblib.load('road_accident_catboost_model.joblib')
-scaler = joblib.load('road_accident_scaler.joblib')
-
-st.title("🛣️ Road Accident Risk Prediction")
-
-# 2. User Input Form
-with st.form("risk_form"):
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        road_type = st.selectbox("Road Type", ["urban", "rural", "highway"])
-        num_lanes = st.slider("Number of Lanes", 1, 4, 2)
-        curvature = st.slider("Curvature (0-1)", 0.0, 1.0, 0.5)
-        speed_limit = st.number_input("Speed Limit", 25, 70, 45)
-        lighting = st.selectbox("Lighting", ["daylight", "dim", "night"])
-        weather = st.selectbox("Weather", ["sunny", "rainy", "foggy"])
-        
-    with col2:
-        time_of_day = st.selectbox("Time of Day", ["morning", "afternoon", "evening"])
-        num_reported_accidents = st.number_input("Reported Accidents", 0, 7, 0)
-        road_signs_present = st.checkbox("Road Signs Present?")
-        public_road = st.checkbox("Public Road?")
-        holiday = st.checkbox("Holiday?")
-        school_season = st.checkbox("School Season?")
-
-    submitted = st.form_submit_button("Predict Risk")
-
-# 3. Prediction Process
 if submitted:
-    # Prepare input data as a DataFrame
-    input_df = pd.DataFrame([{
+    # 1. Kullanıcıdan alınan ham veriyi oluştur
+    input_data = pd.DataFrame([{
         'road_type': road_type,
         'num_lanes': num_lanes,
         'curvature': curvature,
@@ -49,17 +15,34 @@ if submitted:
         'num_reported_accidents': num_reported_accidents
     }])
     
-    # Feature Engineering: Encoding categorical variables
-    # We use get_dummies to match the format used during training
-    input_encoded = pd.get_dummies(input_df)
+    # 2. Get_dummies uygula
+    input_encoded = pd.get_dummies(input_data)
     
-    # Scaling: Applying the same scaler used during training
-    input_scaled = scaler.transform(input_encoded)
+    # 3. CRITICAL: Modelin eğitimde gördüğü tüm sütunları manuel tanımla 
+    # (Eğitim kodundaki train_df_encoded.columns listesini buraya yazmalısın)
+    # Örnek liste:
+    expected_columns = [
+        'num_lanes', 'curvature', 'speed_limit', 'num_reported_accidents',
+        'road_type_highway', 'road_type_rural', 'road_type_urban',
+        'lighting_daylight', 'lighting_dim', 'lighting_night',
+        'weather_foggy', 'weather_rainy', 'weather_sunny',
+        'road_signs_present_True', 'public_road_True',
+        'time_of_day_afternoon', 'time_of_day_evening', 'time_of_day_morning',
+        'holiday_True', 'school_season_True'
+    ]
     
-    # Prediction
+    # 4. Eksik kolonları 0 ile doldur ve sıralamayı düzelt
+    for col in expected_columns:
+        if col not in input_encoded.columns:
+            input_encoded[col] = 0
+            
+    input_final = input_encoded[expected_columns]
+    
+    # 5. Scaler ve Predict
+    input_scaled = scaler.transform(input_final)
     prediction = model.predict(input_scaled)
     
-    # Results Display
+    # Sonuçları göster
     risk_score = prediction[0]
     st.success(f"Predicted Accident Risk Score: {risk_score:.4f}")
     
