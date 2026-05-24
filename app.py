@@ -32,33 +32,29 @@ with st.form("risk_form"):
 
 # 3. Final Çözüm
 if submitted:
-    # A. Hata mesajındaki isimleri baz alarak şablonu manuel tanımlıyoruz
-    # Modelin eğitimde gördüğü isimler bunlar!
-    data = {
-        'num_lanes': float(num_lanes),
-        'curvature': float(curvature),
-        'speed_limit': float(speed_limit),
-        'num_reported_accidents': float(num_reported_accidents),
-        'road_signs_present_True': 1.0 if road_signs_present else 0.0,
-        'public_road_True': 1.0 if public_road else 0.0,
-        'holiday_True': 1.0 if holiday else 0.0,
-        'school_season_True': 1.0 if school_season else 0.0,
-        f'road_type_{road_type}': 1.0,
-        f'lighting_{lighting}': 1.0,
-        f'weather_{weather}': 1.0,
-        f'time_of_day_{time_of_day}': 1.0
-    }
-    
-    # B. Eksik kalan sütunları 0 olarak doldur (Örn: road_type_urban seçilmediyse 0 olsun)
+    # 1. Her şeyi temiz bir şekilde 0 ile başlat
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
-    for col, val in data.items():
-        if col in input_df.columns:
-            input_df.loc[0, col] = val
     
-    # C. Tahmin
-    try:
-        input_scaled = scaler.transform(input_df)
-        prediction = model.predict(input_scaled)
-        st.success(f"Risk Skoru: {prediction[0]:.4f}")
-    except Exception as e:
-        st.error(f"Tahmin Hatası: {e}")
+    # 2. Değerleri atama (Artık eğitimdeki isimler neyse tam o)
+    input_df.loc[0, 'num_lanes'] = float(num_lanes)
+    input_df.loc[0, 'curvature'] = float(curvature)
+    input_df.loc[0, 'speed_limit'] = float(speed_limit)
+    input_df.loc[0, 'num_reported_accidents'] = float(num_reported_accidents)
+    
+    # Boolean değerler (Checkbox'lar)
+    # Yeni modelin sütun isimleri neyse (holiday veya holiday_True) buraya onu yaz
+    input_df.loc[0, 'holiday'] = int(holiday) 
+    input_df.loc[0, 'public_road'] = int(public_road)
+    input_df.loc[0, 'road_signs_present'] = int(road_signs_present)
+    input_df.loc[0, 'school_season'] = int(school_season)
+    
+    # 3. Kategorikler
+    for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
+                f'weather_{weather}', f'time_of_day_{time_of_day}']:
+        if col in input_df.columns:
+            input_df.loc[0, col] = 1
+            
+    # 4. Tahmin
+    input_scaled = scaler.transform(input_df)
+    prediction = model.predict(input_scaled)
+    st.success(f"Risk Skoru: {prediction[0]:.4f}")
