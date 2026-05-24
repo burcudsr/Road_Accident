@@ -1,12 +1,19 @@
+import os
 import streamlit as st
-import pandas as pd
 import joblib
 
-# 1. Load models and columns
-# Make sure these files are in the same directory
-model = joblib.load('road_accident_catboost_model.joblib')
-scaler = joblib.load('road_accident_scaler.joblib')
-model_columns = joblib.load('model_columns.joblib')
+# Dosyaların bulunduğu klasörü otomatik olarak belirle
+base_path = os.path.dirname(__file__)
+
+# Dosya yollarını bu klasöre göre birleştir
+model_path = os.path.join(base_path, 'road_accident_catboost_model.joblib')
+scaler_path = os.path.join(base_path, 'road_accident_scaler.joblib')
+columns_path = os.path.join(base_path, 'model_columns.joblib')
+
+# Modelleri bu yolları kullanarak yükle
+model = joblib.load(model_path)
+scaler = joblib.load(scaler_path)
+model_columns = joblib.load(columns_path)
 
 st.title("🛣️ Road Accident Risk Prediction")
 
