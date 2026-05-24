@@ -3,7 +3,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-# 1. Modelleri yükle
+# 1. Load models
 base_path = os.path.dirname(__file__)
 model = joblib.load(os.path.join(base_path, 'road_accident_catboost_model.joblib'))
 scaler = joblib.load(os.path.join(base_path, 'road_accident_scaler.joblib'))
@@ -11,7 +11,7 @@ model_columns = joblib.load(os.path.join(base_path, 'model_columns.joblib'))
 
 st.title("🛣️ Road Accident Risk Prediction")
 
-# 2. Arayüz
+# 2. Interface
 with st.form("risk_form"):
     col1, col2 = st.columns(2)
     with col1:
@@ -30,24 +30,24 @@ with st.form("risk_form"):
         school_season = st.checkbox("School Season?")
     submitted = st.form_submit_button("Predict Risk")
 
-# 3. Final Tahmin Mantığı
+# 3. Final Prediction Logic
 if submitted:
-    # A. Tüm sütunları 0.0 float olarak hazırla
+    # A. Prepare all columns as 0.0 float
     input_df = pd.DataFrame(0.0, index=[0], columns=model_columns)
     
-    # B. Sayısal verileri yerleştir
+    # B. Place numerical values
     input_df.loc[0, 'num_lanes'] = float(num_lanes)
     input_df.loc[0, 'curvature'] = float(curvature)
     input_df.loc[0, 'speed_limit'] = float(speed_limit)
     input_df.loc[0, 'num_reported_accidents'] = float(num_reported_accidents)
     
-    # C. Checkbox verilerini yerleştir
+    # C. Place checkbox values
     input_df.loc[0, 'road_signs_present'] = 1.0 if road_signs_present else 0.0
     input_df.loc[0, 'public_road'] = 1.0 if public_road else 0.0
     input_df.loc[0, 'holiday'] = 1.0 if holiday else 0.0
     input_df.loc[0, 'school_season'] = 1.0 if school_season else 0.0
     
-    # D. Kategorik verileri yerleştir
+    # D. Place categorical values
     for cat in [road_type, lighting, weather, time_of_day]:
         col_name = f"road_type_{cat}" if cat in ["urban", "rural"] else \
                    f"lighting_{cat}" if cat in ["dim", "night"] else \
@@ -57,10 +57,10 @@ if submitted:
         if col_name and col_name in input_df.columns:
             input_df.loc[0, col_name] = 1.0
             
-    # E. Tahmin
+    # E. Predict
     try:
         input_scaled = scaler.transform(input_df)
         prediction = model.predict(input_scaled)
         st.success(f"Predicted Accident Risk Score: {prediction[0]:.4f}")
     except Exception as e:
-        st.error(f"Tahmin Hatası: {e}")
+        st.error(f"Prediction Error: {e}")
