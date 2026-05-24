@@ -32,36 +32,42 @@ with st.form("risk_form"):
 
 # 3. Kesin Çözüm: Tahmin Mantığı
 if submitted:
-    # A. Eğitimdeki tam sütun yapısıyla boş bir DataFrame oluştur
-    input_df = pd.DataFrame(0, index=[0], columns=model_columns)
+    # 1. Eğitimde modelin gördüğü tam sütun listesini baz alarak bir boş sözlük oluştur
+    # Bu, scaler'ın beklediği tüm sütun isimlerini içerir.
+    input_data = {col: 0.0 for col in model_columns}
     
-    # B. Kullanıcı verilerini modelin beklediği isimlerle eşleştir
-    # İsimleri Hata Mesajındaki isimlerle birebir aynı yaptık
-    input_values = {
-        'num_lanes': float(num_lanes),
-        'curvature': float(curvature),
-        'speed_limit': float(speed_limit),
-        'num_reported_accidents': float(num_reported_accidents),
-        'road_signs_present_True': 1.0 if road_signs_present else 0.0,
-        'public_road_True': 1.0 if public_road else 0.0,
-        'holiday_True': 1.0 if holiday else 0.0,
-        'school_season_True': 1.0 if school_season else 0.0,
-        f'road_type_{road_type}': 1.0,
-        f'lighting_{lighting}': 1.0,
-        f'weather_{weather}': 1.0,
-        f'time_of_day_{time_of_day}': 1.0
-    }
+    # 2. Sayısal ve boolean değerleri sözlüğe (dictionary) ata
+    input_data['num_lanes'] = float(num_lanes)
+    input_data['curvature'] = float(curvature)
+    input_data['speed_limit'] = float(speed_limit)
+    input_data['num_reported_accidents'] = float(num_reported_accidents)
     
-    # C. Verileri DataFrame'e güvenli şekilde aktar
-    for col_name, value in input_values.items():
-        if col_name in input_df.columns:
-            input_df.loc[0, col_name] = value
+    # Checkbox değerlerini 1.0 veya 0.0 olarak ata
+    # İsimlerin model_columns'taki ile birebir aynı olduğundan emin olun (suffix'lere dikkat!)
+    # Hata mesajınıza göre 'holiday_True' gibi isimler bekliyor olabilir.
+    if 'holiday_True' in input_data: input_data['holiday_True'] = 1.0 if holiday else 0.0
+    if 'public_road_True' in input_data: input_data['public_road_True'] = 1.0 if public_road else 0.0
+    if 'road_signs_present_True' in input_data: input_data['road_signs_present_True'] = 1.0 if road_signs_present else 0.0
+    if 'school_season_True' in input_data: input_data['school_season_True'] = 1.0 if school_season else 0.0
+    
+    # 3. Kategorik (dummy) değişkenleri ata
+    for col in [f'road_type_{road_type}', f'lighting_{lighting}', 
+                f'weather_{weather}', f'time_of_day_{time_of_day}']:
+        if col in input_data:
+            input_data[col] = 1.0
             
-    # D. Ölçeklendirme ve Tahmin
+    # 4. DataFrame'i sözlükten oluştur (En güvenli yöntem)
+    input_df = pd.DataFrame([input_data])
+    
+    # 5. Sütun sırasını model_columns ile zorla eşle
+    input_df = input_df[model_columns]
+    
+    # 6. Tahmin yap
     try:
         input_scaled = scaler.transform(input_df)
         prediction = model.predict(input_scaled)
         st.success(f"Predicted Accident Risk Score: {prediction[0]:.4f}")
     except Exception as e:
-        st.error(f"Tahmin Hatası: {e}")
-        st.write("Modelin Beklediği Sütunlar:", list(model_columns))
+        st.error(f"Tahmin Hatası: {str(e)}")
+        # Hata devam ederse, beklentiyi görelim:
+        st.write("Modelin beklediği sütunlar (model_columns):", model_columns)
