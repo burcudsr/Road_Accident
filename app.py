@@ -39,33 +39,38 @@ with st.form("risk_form"):
 
 # 3. Tahmin İşlemi
 if submitted:
-    # A. Modelin beklediği tüm sütunları 0 olarak içeren bir şablon DataFrame oluştur
+    # A. Modelin beklediği tüm sütunları 0 (int) olarak içeren boş bir şablon oluştur
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # B. Kullanıcıdan gelen değerleri şablona ata
+    # B. Sayısal değişkenleri ata
     input_df['num_lanes'] = num_lanes
     input_df['curvature'] = curvature
     input_df['speed_limit'] = speed_limit
     input_df['num_reported_accidents'] = num_reported_accidents
     
-    # Kategorik değerler (Dummy sütunlarını 1 yap)
-    # NOT: Eğitimdeki sütun isimlerinizle birebir aynı olduğundan emin olun
-    input_df[f'road_type_{road_type}'] = 1
-    input_df[f'lighting_{lighting}'] = 1
-    input_df[f'weather_{weather}'] = 1
-    input_df[f'time_of_day_{time_of_day}'] = 1
+    # C. Kategorik değişkenler (drop_first=True mantığı ile)
+    # Eğer değer 'ilk' (eğitimde düşürülen) kategori değilse sütunu 1 yap
+    if road_type != 'highway':
+        input_df[f'road_type_{road_type}'] = 1
+    if lighting != 'daylight':
+        input_df[f'lighting_{lighting}'] = 1
+    if weather != 'sunny':
+        input_df[f'weather_{weather}'] = 1
+    if time_of_day != 'morning':
+        input_df[f'time_of_day_{time_of_day}'] = 1
     
-    # Boolean değerler (1 veya 0)
+    # D. Boolean değişkenleri int (1 veya 0) formatında ata
     input_df['road_signs_present'] = int(road_signs_present)
     input_df['public_road'] = int(public_road)
     input_df['holiday'] = int(holiday)
     input_df['school_season'] = int(school_season)
     
-    # C. Ölçeklendirme ve Tahmin
+    # E. Ölçeklendirme ve Tahmin
+    # Şimdi sütunlar ve tipler modelin beklentisiyle %100 uyumlu
     input_scaled = scaler.transform(input_df)
     prediction = model.predict(input_scaled)
     
-    # D. Sonuçları Göster
+    # F. Sonuçları Göster
     risk_score = prediction[0]
     st.success(f"Predicted Accident Risk Score: {risk_score:.4f}")
     
