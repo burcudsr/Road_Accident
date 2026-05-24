@@ -1,6 +1,41 @@
+import streamlit as st
+import pandas as pd
+import joblib
+
+# 1. Load models and columns
+# Make sure these files are in the same directory
+model = joblib.load('road_accident_catboost_model.joblib')
+scaler = joblib.load('road_accident_scaler.joblib')
+model_columns = joblib.load('model_columns.joblib')
+
+st.title("🛣️ Road Accident Risk Prediction")
+
+# 2. User Input Form
+with st.form("risk_form"):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        road_type = st.selectbox("Road Type", ["urban", "rural", "highway"])
+        num_lanes = st.slider("Number of Lanes", 1, 4, 2)
+        curvature = st.slider("Curvature (0-1)", 0.0, 1.0, 0.5)
+        speed_limit = st.number_input("Speed Limit", 25, 70, 45)
+        lighting = st.selectbox("Lighting", ["daylight", "dim", "night"])
+        weather = st.selectbox("Weather", ["sunny", "rainy", "foggy"])
+        
+    with col2:
+        time_of_day = st.selectbox("Time of Day", ["morning", "afternoon", "evening"])
+        num_reported_accidents = st.number_input("Reported Accidents", 0, 7, 0)
+        road_signs_present = st.checkbox("Road Signs Present?")
+        public_road = st.checkbox("Public Road?")
+        holiday = st.checkbox("Holiday?")
+        school_season = st.checkbox("School Season?")
+
+    submitted = st.form_submit_button("Predict Risk")
+
+# 3. Prediction Process
 if submitted:
-    # 1. Kullanıcıdan alınan ham veriyi oluştur
-    input_data = pd.DataFrame([{
+    # Create input DataFrame
+    input_df = pd.DataFrame([{
         'road_type': road_type,
         'num_lanes': num_lanes,
         'curvature': curvature,
@@ -15,34 +50,23 @@ if submitted:
         'num_reported_accidents': num_reported_accidents
     }])
     
-    # 2. Get_dummies uygula
-    input_encoded = pd.get_dummies(input_data)
+    # Preprocessing
+    # 1. Apply one-hot encoding for categorical variables
+    input_encoded = pd.get_dummies(input_df)
     
-    # 3. CRITICAL: Modelin eğitimde gördüğü tüm sütunları manuel tanımla 
-    # (Eğitim kodundaki train_df_encoded.columns listesini buraya yazmalısın)
-    # Örnek liste:
-    expected_columns = [
-        'num_lanes', 'curvature', 'speed_limit', 'num_reported_accidents',
-        'road_type_highway', 'road_type_rural', 'road_type_urban',
-        'lighting_daylight', 'lighting_dim', 'lighting_night',
-        'weather_foggy', 'weather_rainy', 'weather_sunny',
-        'road_signs_present_True', 'public_road_True',
-        'time_of_day_afternoon', 'time_of_day_evening', 'time_of_day_morning',
-        'holiday_True', 'school_season_True'
-    ]
+    # 2. Convert boolean columns to integer (0 or 1) to match training data
+    bool_cols = input_encoded.select_dtypes(include=['bool']).columns
+    for col in bool_cols:
+        input_encoded[col] = input_encoded[col].astype(int)
+        
+    # 3. Reindex to match the exact feature set the model was trained on
+    input_final = input_encoded.reindex(columns=model_columns, fill_value=0)
     
-    # 4. Eksik kolonları 0 ile doldur ve sıralamayı düzelt
-    for col in expected_columns:
-        if col not in input_encoded.columns:
-            input_encoded[col] = 0
-            
-    input_final = input_encoded[expected_columns]
-    
-    # 5. Scaler ve Predict
+    # 4. Scale and predict
     input_scaled = scaler.transform(input_final)
     prediction = model.predict(input_scaled)
     
-    # Sonuçları göster
+    # 5. Display Results
     risk_score = prediction[0]
     st.success(f"Predicted Accident Risk Score: {risk_score:.4f}")
     
