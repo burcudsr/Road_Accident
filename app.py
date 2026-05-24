@@ -39,34 +39,39 @@ with st.form("risk_form"):
 
 # 3. Tahmin İşlemi
 if submitted:
-    # A. Modelin beklediği tüm sütunları 0 (int) olarak içeren boş bir şablon oluştur
+    # 1. Modelin eğitimde gördüğü tüm sütunları 0 (int) olarak içeren şablonu oluştur
+    # Bu, sütun ismi ve sırasını eğitim aşamasıyla %100 uyumlu hale getirir.
     input_df = pd.DataFrame(0, index=[0], columns=model_columns)
     
-    # B. Sayısal değişkenleri ata
+    # 2. Sayısal değişkenleri ata
     input_df['num_lanes'] = num_lanes
     input_df['curvature'] = curvature
     input_df['speed_limit'] = speed_limit
     input_df['num_reported_accidents'] = num_reported_accidents
     
-    # C. Kategorik değişkenler (drop_first=True mantığı ile)
-    # Eğer değer 'ilk' (eğitimde düşürülen) kategori değilse sütunu 1 yap
-    if road_type != 'highway':
-        input_df[f'road_type_{road_type}'] = 1
-    if lighting != 'daylight':
-        input_df[f'lighting_{lighting}'] = 1
-    if weather != 'sunny':
-        input_df[f'weather_{weather}'] = 1
-    if time_of_day != 'morning':
-        input_df[f'time_of_day_{time_of_day}'] = 1
-    
-    # D. Boolean değişkenleri int (1 veya 0) formatında ata
+    # 3. Zaten 1-0 olan (bool) değişkenleri ata
     input_df['road_signs_present'] = int(road_signs_present)
     input_df['public_road'] = int(public_road)
     input_df['holiday'] = int(holiday)
     input_df['school_season'] = int(school_season)
     
-    # E. Ölçeklendirme ve Tahmin
-    # Şimdi sütunlar ve tipler modelin beklentisiyle %100 uyumlu
+    # 4. Kategorik değişkenleri (dummies) ata
+    # Eğitimde 'drop_first=True' kullandığınızı varsayarak:
+    # Sadece ilk kategoriden farklı olanı 1 yapıyoruz.
+    if f'road_type_{road_type}' in input_df.columns:
+        input_df[f'road_type_{road_type}'] = 1
+        
+    if f'lighting_{lighting}' in input_df.columns:
+        input_df[f'lighting_{lighting}'] = 1
+        
+    if f'weather_{weather}' in input_df.columns:
+        input_df[f'weather_{weather}'] = 1
+        
+    if f'time_of_day_{time_of_day}' in input_df.columns:
+        input_df[f'time_of_day_{time_of_day}'] = 1
+    
+    # 5. Scaler ve Predict
+    # Artık tüm sütunlar eğitimdekiyle birebir aynı, hata vermeyecektir
     input_scaled = scaler.transform(input_df)
     prediction = model.predict(input_scaled)
     
